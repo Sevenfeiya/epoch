@@ -99,11 +99,17 @@ payload(#spend_tx{payload = Payload}) ->
 -spec check(tx(), aetx:tx_context(), aec_trees:trees(), aec_blocks:height(), non_neg_integer()) ->
         {ok, aec_trees:trees()} | {error, term()}.
 check(#spend_tx{} = SpendTx, _Context, Trees, Height, _ConsensusVersion) ->
-    RecipientPubkey = recipient(SpendTx),
+    RecipientPubkeyOrName = recipient(SpendTx),
     Checks = [fun check_sender_account/3],
     case aeu_validation:run(Checks, [SpendTx, Trees, Height]) of
         ok ->
-            {ok, aec_trees:ensure_account(RecipientPubkey, Trees)};
+            NSTrees0 = aec_trees:ns(Trees),
+            case aens:resolve_decoded(account_pubkey, RecipientPubkeyOrName, NSTrees0) of
+                {ok, RecipientPubkey} ->
+                    {ok, aec_trees:ensure_account(RecipientPubkey, Trees)};
+                {error, _Reason} = Error ->
+                    Error
+            end;
         {error, _Reason} = Error ->
             Error
     end.
@@ -112,17 +118,22 @@ check(#spend_tx{} = SpendTx, _Context, Trees, Height, _ConsensusVersion) ->
 signers(#spend_tx{} = Tx, _) -> {ok, [sender(Tx)]}.
 
 -spec process(tx(), aetx:tx_context(), aec_trees:trees(), aec_blocks:height(), non_neg_integer()) -> {ok, aec_trees:trees()}.
-process(#spend_tx{amount = Amount,
+process(#spend_tx{sender = SenderPubkey,
+                  recipient = RecipientPubkeyOrName,
+                  amount = Amount,
                   fee = Fee,
                   nonce = Nonce} = Tx, _Context, Trees0, _Height, _ConsensusVersion) ->
     SenderPubkey = sender(Tx),
     RecipientPubkey = recipient(Tx),
 
     AccountsTrees0 = aec_trees:accounts(Trees0),
+    NSTrees0 = aec_trees:ns(Trees0),
 
     {value, SenderAccount0} = aec_accounts_trees:lookup(SenderPubkey, AccountsTrees0),
     {ok, SenderAccount} = aec_accounts:spend(SenderAccount0, Amount + Fee, Nonce),
     AccountsTrees1 = aec_accounts_trees:enter(SenderAccount, AccountsTrees0),
+
+    {ok, RecipientPubkey} = aens:resolve_decoded(account_pubkey, RecipientPubkeyOrName, NSTrees0),
 
     {value, RecipientAccount0} = aec_accounts_trees:lookup(RecipientPubkey, AccountsTrees1),
     {ok, RecipientAccount} = aec_accounts:earn(RecipientAccount0, Amount),

@@ -25,8 +25,6 @@ handle_request('PostSpendTx', #{'SpendTx' := SpendTxObj}, _Context) ->
     case aehttp_int_tx_logic:spend(EncodedRecipientPubkey, Amount, Fee, TTL, Payload) of
         {ok, STx} ->
             {200, [], #{<<"tx_hash">> => aec_base58c:encode(tx_hash, aetx_sign:hash(STx))}};
-        {error, invalid_key} ->
-            {404, [], #{reason => <<"Invalid key">>}};
         {error, account_not_found} ->
             {404, [], #{reason => <<"Account not found">>}};
         {error, key_not_found} ->
@@ -89,8 +87,6 @@ handle_request('PostOracleQueryTx', #{'OracleQueryTx' := OracleQueryTxObj}, _Con
             {_, TxHash} = aehttp_int_tx_logic:sender_and_hash(Tx),
             {200, [], #{query_id => aec_base58c:encode(oracle_query_id, QId),
                         tx_hash => aec_base58c:encode(tx_hash, TxHash)}};
-        {error, invalid_key} ->
-            {404, [], #{reason => <<"Invalid key">>}};
         {error, account_not_found} ->
             {404, [], #{reason => <<"Account not found">>}};
         {error, key_not_found} ->
@@ -114,6 +110,7 @@ handle_request('PostOracleResponseTx', #{'OracleResponseTx' := OracleResponseTxO
                     {404, [], #{reason => <<"Account not found">>}};
                 {error, key_not_found} ->
                     {404, [], #{reason => <<"Keys not configured">>}}
+
             end;
         {error, _} ->
             {404, [], #{reason => <<"Invalid Query Id">>}}
