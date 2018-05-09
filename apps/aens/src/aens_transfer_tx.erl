@@ -107,11 +107,10 @@ check(#ns_transfer_tx{nonce = Nonce, fee = Fee} = Tx,
         {error, Reason} -> {error, Reason}
     end.
 
--spec process(tx(), aetx:tx_context(), aec_trees:trees(), aec_blocks:height(), non_neg_integer()) ->
-        {ok, aec_trees:trees()}.
-process(#ns_transfer_tx{fee = Fee, nonce = Nonce} = TransferTx,
-        _Context, Trees0, _Height, _ConsensusVersion) ->
-    NameHash = name_hash(TransferTx),
+-spec process(tx(), aetx:tx_context(), aec_trees:trees(), aec_blocks:height(), non_neg_integer()) -> {ok, aec_trees:trees()}.
+process(#ns_transfer_tx{fee = Fee,
+                        nonce = Nonce,
+                        recipient_account = RecipientPubKeyOrName} = TransferTx, _Context, Trees0, _Height, _ConsensusVersion) ->NameHash = name_hash(TransferTx),
     AccountPubKey = account(TransferTx),
     AccountsTree0 = aec_trees:accounts(Trees0),
     NamesTree0 = aec_trees:ns(Trees0),
@@ -121,7 +120,9 @@ process(#ns_transfer_tx{fee = Fee, nonce = Nonce} = TransferTx,
     AccountsTree1 = aec_accounts_trees:enter(Account1, AccountsTree0),
 
     Name0 = aens_state_tree:get_name(NameHash, NamesTree0),
-    Name1 = aens_names:transfer(TransferTx, Name0),
+
+    {ok, RecipientPubKey} = aens:resolve_decoded(account_pubkey, RecipientPubKeyOrName, NamesTree0),
+    Name1 = aens_names:transfer(RecipientPubKey, Name0),
     NamesTree1 = aens_state_tree:enter_name(Name1, NamesTree0),
 
     Trees1 = aec_trees:set_accounts(Trees0, AccountsTree1),
