@@ -8,6 +8,7 @@
                         , read_optional_params/1
                         , parse_map_to_atom_keys/0
                         , base58_decode/1
+                        , base58_decode_or_name/1
                         , hexstrings_decode/1
                         , nameservice_pointers_decode/1
                         , get_nonce/1
@@ -224,7 +225,7 @@ handle_request('PostOracleExtend', #{'OracleExtendTx' := Req}, _Context) ->
     ParseFuns = [parse_map_to_atom_keys(),
                  read_required_params([oracle, oracle_ttl, fee]),
                  read_optional_params([{ttl, ttl, '$no_value'}]),
-                 base58_decode([{oracle, oracle, oracle_pubkey}]),
+                 base58_decode_or_name([{oracle, oracle, oracle_pubkey}]),
                  get_nonce(oracle),
                  ttl_decode(oracle_ttl),
                  unsigned_tx_response(fun aeo_extend_tx:new/1)
@@ -236,8 +237,8 @@ handle_request('PostOracleQuery', #{'OracleQueryTx' := Req}, _Context) ->
                  read_required_params([sender, oracle_pubkey, query,
                                        query_fee, fee, query_ttl, response_ttl]),
                  read_optional_params([{ttl, ttl, '$no_value'}]),
-                 base58_decode([{sender, sender, account_pubkey},
-                               {oracle_pubkey, oracle, oracle_pubkey}]),
+                 base58_decode_or_name([{sender, sender, account_pubkey},
+                                        {oracle_pubkey, oracle, oracle_pubkey}]),
                  get_nonce(sender),
                  ttl_decode(query_ttl),
                  relative_ttl_decode(response_ttl),
@@ -250,8 +251,8 @@ handle_request('PostOracleResponse', #{'OracleResponseTx' := Req}, _Context) ->
     ParseFuns = [parse_map_to_atom_keys(),
                  read_required_params([oracle, query_id, response, fee]),
                  read_optional_params([{ttl, ttl, '$no_value'}]),
-                 base58_decode([{oracle, oracle, oracle_pubkey},
-                               {query_id, query_id, oracle_query_id}]),
+                 base58_decode_or_name([{oracle, oracle, oracle_pubkey},
+                                        {query_id, query_id, oracle_query_id}]),
                  get_nonce(oracle),
                  verify_oracle_query_existence(oracle, query_id),
                  unsigned_tx_response(fun aeo_response_tx:new/1)
