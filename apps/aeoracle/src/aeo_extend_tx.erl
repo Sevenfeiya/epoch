@@ -95,11 +95,11 @@ check(#oracle_extend_tx{nonce = Nonce, oracle_ttl = OTTL, fee = Fee} = Tx,
     OraclePubKeyOrName = oracle(Tx),
 
     NamesTree = aec_trees:ns(Trees),
-    {ok, OraclePubKey} = aens:resolve_decoded(oracle_pubkey, OraclePubKeyOrName, NamesTree),
+    {ok, OraclePK} = aens:resolve_decoded(oracle_pubkey, OraclePubKeyOrName, NamesTree),
 
     Checks =
-        [fun() -> aetx_utils:check_account(OraclePubKey, Trees, Nonce, Fee) end,
-         fun() -> ensure_oracle(OraclePubKey, Trees) end,
+        [fun() -> aetx_utils:check_account(OraclePK, Trees, Nonce, Fee) end,
+         fun() -> ensure_oracle(OraclePK, Trees) end,
          fun() -> aeo_utils:check_ttl_fee(Height, OTTL, Fee - ?ORACLE_EXTEND_TX_FEE) end],
 
     case aeu_validation:run(Checks) of

@@ -12,7 +12,6 @@
                         , hexstrings_decode/1
                         , nameservice_pointers_decode/1
                         , get_nonce/1
-                        , get_nonce_resolved_name/2
                         , print_state/0
                         , get_contract_code/2
                         , get_contract_call_object_from_tx/2
@@ -226,8 +225,8 @@ handle_request('PostOracleExtend', #{'OracleExtendTx' := Req}, _Context) ->
     ParseFuns = [parse_map_to_atom_keys(),
                  read_required_params([oracle, oracle_ttl, fee]),
                  read_optional_params([{ttl, ttl, '$no_value'}]),
-                 base58_decode_or_name([{oracle, oracle, oracle_pubkey}]),
-                 get_nonce_resolved_name(oracle, oracle_pubkey),
+                 base58_decode([{oracle, oracle, oracle_pubkey}]),
+                 get_nonce(oracle),
                  ttl_decode(oracle_ttl),
                  unsigned_tx_response(fun aeo_extend_tx:new/1)
                 ],
