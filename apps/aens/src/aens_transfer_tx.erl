@@ -185,7 +185,7 @@ for_client(#ns_transfer_tx{nonce             = Nonce,
       <<"account">>          => aec_base58c:encode(account_pubkey, account(Tx)),
       <<"nonce">>            => Nonce,
       <<"name_hash">>        => aec_base58c:encode(name, name_hash(Tx)),
-      <<"recipient_pubkey">> => aec_base58c:encode(account_pubkey, recipient_account(Tx)),
+      <<"recipient_pubkey">> => aens_utils:base58c_encode_or_valid_name(account_pubkey, recipient_account(Tx)),
       <<"fee">>              => Fee,
       <<"ttl">>              => TTL}.
 

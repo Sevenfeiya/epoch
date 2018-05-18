@@ -195,7 +195,7 @@ for_client(#spend_tx{amount = Amount,
                      payload = Payload} = Tx) ->
     #{<<"sender">> => aec_base58c:encode(account_pubkey, sender(Tx)),
       <<"data_schema">> => <<"SpendTxJSON">>, % swagger schema name
-      <<"recipient">> => aec_base58c:encode(account_pubkey, recipient(Tx)),
+      <<"recipient">> => aens_utils:base58c_encode_or_valid_name(account_pubkey, recipient(Tx)),
       <<"amount">> => Amount,
       <<"fee">> => Fee,
       <<"ttl">> => TTL,
