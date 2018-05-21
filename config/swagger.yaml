@@ -2003,6 +2003,8 @@ paths:
 definitions:
   EncodedHash:
     type: string
+  EncodedHashOrName:
+    type: string
   Pow:
     type: array
     items:
@@ -2143,7 +2145,7 @@ definitions:
     type: object
     properties:
       recipient_pubkey:
-        $ref: '#/definitions/EncodedHash'
+        $ref: '#/definitions/EncodedHashOrName'
       amount:
         type: integer
         format: int64
@@ -2230,7 +2232,7 @@ definitions:
     type: object
     properties:
       oracle_pubkey:
-        type: string
+        $ref: '#/definitions/EncodedHashOrName'
       query:
         type: string
       query_fee:
@@ -2399,7 +2401,7 @@ definitions:
       name_hash:
         type: string
       recipient_pubkey:
-        type: string
+        $ref: '#/definitions/EncodedHashOrName'
       fee:
         type: integer
         format: int64
