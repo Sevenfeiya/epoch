@@ -2549,9 +2549,9 @@
     },
     "SpendTx" : {
       "type" : "object",
-      "required" : [ "amount", "fee", "payload", "recipient_pubkey" ],
+      "required" : [ "amount", "fee", "payload", "recipient" ],
       "properties" : {
-        "recipient_pubkey" : {
+        "recipient" : {
           "$ref" : "#/definitions/EncodedHashOrName"
         },
         "amount" : {
@@ -2583,7 +2583,7 @@
         "sender" : { },
         "payload" : "payload",
         "fee" : 6,
-        "recipient_pubkey" : { },
+        "recipient" : { },
         "ttl" : 1,
         "nonce" : 5
       }

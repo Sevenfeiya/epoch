@@ -87,8 +87,8 @@ base58c_decode_safe_or_valid_name(Type, EncodedOrName) ->
     case aec_base58c:safe_decode(Type, EncodedOrName) of
         {ok, Decoded}   -> {ok, Decoded};
         {error, _Error} ->
-            case validate_name(EncodedOrName) of
-                ok             -> {ok, EncodedOrName};
+            case aec_base58c:safe_decode(name, EncodedOrName) of
+                {ok, Decoded}  -> {ok, Decoded};
                 {error, Error} -> {error, Error}
             end
     end.

@@ -320,12 +320,11 @@ handle_request('PostNameRevoke', #{'NameRevokeTx' := Req}, _Context) ->
 
 handle_request('PostSpend', #{'SpendTx' := Req}, _Context) ->
     ParseFuns = [parse_map_to_atom_keys(),
-                 read_required_params([sender,
-                                       {recipient_pubkey, recipient},
+                 read_required_params([sender, recipient,
                                         amount, fee, payload]),
                  read_optional_params([{ttl, ttl, '$no_value'}]),
-                 base58_decode([{sender, sender, account_pubkey},
-                                {recipient, recipient, account_pubkey}]),
+                 base58_decode([{sender, sender, account_pubkey}]),
+                 base58_decode_or_name([{recipient, recipient, account_pubkey}]),
                  get_nonce(sender),
                  unsigned_tx_response(fun aec_spend_tx:new/1)
                 ],

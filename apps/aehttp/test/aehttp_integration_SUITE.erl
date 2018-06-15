@@ -1359,8 +1359,7 @@ spend_transaction(_Config) ->
     {ok, MinerPubkey} = aec_base58c:safe_decode(account_pubkey, MinerAddress),
     RandAddress = random_hash(),
     Encoded = #{sender => MinerAddress,
-                recipient_pubkey => aec_base58c:encode(account_pubkey,
-                                                       RandAddress),
+                recipient => aec_base58c:encode(account_pubkey, RandAddress),
                 amount => 2,
                 fee => 1,
                 ttl => 43,
@@ -1386,8 +1385,7 @@ unknown_atom_in_spend_tx(_Config) ->
     {ok, 200, #{<<"pub_key">> := MinerAddress}} = get_miner_pub_key(),
     RandAddress = random_hash(),
     Encoded = #{sender => MinerAddress,
-                recipient_pubkey => aec_base58c:encode(account_pubkey,
-                                                       RandAddress),
+                recipien => aec_base58c:encode(account_pubkey, RandAddress),
                 amount => 2,
                 fee => 1,
                 %% this tests relies on this being an atom unknown to the VM
@@ -1444,8 +1442,7 @@ get_transaction(_Config) ->
     %% test in mempool
     RandAddress = random_hash(),
     Encoded = #{sender => EncodedPubKey,
-                recipient_pubkey => aec_base58c:encode(account_pubkey,
-                                                       RandAddress),
+                recipient => aec_base58c:encode(account_pubkey, RandAddress),
                 amount => 2,
                 fee => 1,
                 payload => <<"foo">>},
@@ -2439,7 +2436,7 @@ naming_spend_to_name(_Config) ->
     aecore_suite_utils:mine_blocks(aecore_suite_utils:node_name(?NODE), 5),
     {ok, 200, #{<<"balance">> := Balance}} = get_balance_at_top(EncodedPubKey),
 
-    post_spend_tx_name(NameHash, Amount, Fee),
+    post_spend_tx_to_name(NameHash, Amount, Fee),
 
     {ok, [Block]} = aecore_suite_utils:mine_blocks(aecore_suite_utils:node_name(?NODE), 1),
     {ok, []} = rpc(aec_tx_pool, peek, [infinity]),
@@ -3773,8 +3770,18 @@ post_spend_tx(Recipient, Amount, Fee) ->
 post_spend_tx(Recipient, Amount, Fee, Payload) ->
     Host = internal_address(),
     http_request(Host, post, "spend-tx",
-                 #{recipient_pubkey => aec_base58c:encode(
-                                         account_pubkey, Recipient),
+                 #{recipient => aec_base58c:encode(account_pubkey, Recipient),
+                   amount => Amount,
+                   fee => Fee,
+                   payload => Payload}).
+
+post_spend_tx_to_name(Recipient, Amount, Fee) ->
+    post_spend_tx_to_name(Recipient, Amount, Fee, <<"foo">>).
+
+post_spend_tx_to_name(Recipient, Amount, Fee, Payload) ->
+    Host = internal_address(),
+    http_request(Host, post, "spend-tx",
+                 #{recipient => aec_base58c:encode(name, Recipient),
                    amount => Amount,
                    fee => Fee,
                    payload => Payload}).
@@ -3805,7 +3812,7 @@ post_name_transfer_tx(NameHash, RecipientPubKey, Fee) ->
     Host = internal_address(),
     http_request(Host, post, "name-transfer-tx",
                  #{name_hash        => aec_base58c:encode(name, NameHash),
-                   recipient_pubkey => aec_base58c:encode(account_pubkey, RecipientPubKey),
+                   recipient => aec_base58c:encode(account_pubkey, RecipientPubKey),
                    fee              => Fee}).
 
 post_name_revoke_tx(NameHash, Fee) ->
@@ -4013,7 +4020,7 @@ swagger_validation_schema(_Config) ->
                         <<"error">> := <<"wrong_type">>,
                         <<"path">> := [<<"fee">>]
         }}} = http_request(Host, post, "spend-tx", #{
-                   recipient_pubkey => <<"">>,
+                   recipient => <<"">>,
                    amount => 0,
                    fee => <<"wrong_fee_data">>,
                    ttl => 100,
@@ -4022,7 +4029,7 @@ swagger_validation_schema(_Config) ->
             <<"reason">> := <<"validation_error">>,
             <<"parameter">> := <<"body">>,
             <<"info">> :=  #{
-                        <<"data">> := <<"recipient_pubkey">>,
+                        <<"data">> := <<"recipient">>,
                         <<"error">> := <<"missing_required_property">>,
                         <<"path">> := []
         }}} = http_request(Host, post, "spend-tx", #{
@@ -4038,7 +4045,7 @@ swagger_validation_schema(_Config) ->
                         <<"error">> := <<"not_in_range">>,
                         <<"path">> := [<<"amount">>]
         }}} = http_request(Host, post, "spend-tx", #{
-                   recipient_pubkey => <<"">>,
+                   recipient => <<"">>,
                    amount => -1,
                    fee => <<"fee">>,
                    ttl => 100,

@@ -97,9 +97,11 @@ base58_decode_or_name(Params) ->
             Encoded = maps:get(Name, Data),
              case aec_base58c:safe_decode(Type, Encoded) of
                 {error, _} ->
-                    case aens_utils:validate_name(Encoded) of
-                        ok -> {ok, Encoded};
-                        {error, _} -> error
+                    case aec_base58c:safe_decode(name, Encoded) of
+                        {error, _} ->
+                            error;
+                        {ok, Hash} ->
+                            {ok, Hash}
                     end;
                 {ok, Hash} ->
                     {ok, Hash}

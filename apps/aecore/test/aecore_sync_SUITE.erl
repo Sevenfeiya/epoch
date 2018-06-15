@@ -517,7 +517,7 @@ new_tx(#{node1 := N1, node2 := N2, amount := Am, fee := Fee} = _M) ->
                     [ [<<"http">>, <<"internal">>, <<"port">>],
                       aehttp, [internal, port], 8143], 5000),
     Params = #{sender_pubkey => PK1,
-               recipient_pubkey => aec_base58c:encode(account_pubkey, PK2),
+               recipient => aec_base58c:encode(account_pubkey, PK2),
                amount => Am,
                fee => Fee,
                payload => <<"foo">>},
