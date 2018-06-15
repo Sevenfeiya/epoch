@@ -118,8 +118,7 @@ check(#spend_tx{} = SpendTx, _Context, Trees, Height, _ConsensusVersion) ->
 signers(#spend_tx{} = Tx, _) -> {ok, [sender(Tx)]}.
 
 -spec process(tx(), aetx:tx_context(), aec_trees:trees(), aec_blocks:height(), non_neg_integer()) -> {ok, aec_trees:trees()}.
-process(#spend_tx{sender = SenderPubkey,
-                  recipient = RecipientPubkeyOrName,
+process(#spend_tx{recipient = RecipientPubkeyOrName,
                   amount = Amount,
                   fee = Fee,
                   nonce = Nonce} = Tx, _Context, Trees0, _Height, _ConsensusVersion) ->

@@ -2425,12 +2425,13 @@ block_txs_list_by_hash_invalid_range(_Config) ->
     ok.
 
 naming_spend_to_name(_Config) ->
-    Amount        = 5,
-    MineReward    = rpc(aec_governance, block_mine_reward, []),
-    NamePubKey    = random_hash(),
-    NamePubKeyEnc = aec_base58c:encode(account_pubkey, NamePubKey),
-    Name          = <<"test.test"/utf8>>,
-    Fee           = 1,
+    Amount         = 5,
+    MineReward     = rpc(aec_governance, block_mine_reward, []),
+    NamePubKey     = random_hash(),
+    NamePubKeyEnc  = aec_base58c:encode(account_pubkey, NamePubKey),
+    Name           = <<"test.test"/utf8>>,
+    Fee            = 1,
+    {ok, NameHash} = aens:get_name_hash(Name),
 
     naming_pre_claim_claim_update(_Config, Name, NamePubKey),
 
@@ -2438,7 +2439,7 @@ naming_spend_to_name(_Config) ->
     aecore_suite_utils:mine_blocks(aecore_suite_utils:node_name(?NODE), 5),
     {ok, 200, #{<<"balance">> := Balance}} = get_balance_at_top(EncodedPubKey),
 
-    post_spend_tx(Name, Amount, Fee),
+    post_spend_tx_name(NameHash, Amount, Fee),
 
     {ok, [Block]} = aecore_suite_utils:mine_blocks(aecore_suite_utils:node_name(?NODE), 1),
     {ok, []} = rpc(aec_tx_pool, peek, [infinity]),

@@ -92,11 +92,7 @@ origin(#oracle_extend_tx{} = Tx) ->
     {ok, aec_trees:trees()} | {error, term()}.
 check(#oracle_extend_tx{nonce = Nonce, oracle_ttl = OTTL, fee = Fee} = Tx,
       _Context, Trees, Height, _ConsensusVersion) ->
-    OraclePubKeyOrName = oracle(Tx),
-
-    NamesTree = aec_trees:ns(Trees),
-    {ok, OraclePK} = aens:resolve_decoded(oracle_pubkey, OraclePubKeyOrName, NamesTree),
-
+    OraclePK = oracle(Tx),
     Checks =
         [fun() -> aetx_utils:check_account(OraclePK, Trees, Nonce, Fee) end,
          fun() -> ensure_oracle(OraclePK, Trees) end,
@@ -115,12 +111,9 @@ signers(#oracle_extend_tx{} = Tx, _) ->
         {ok, aec_trees:trees()}.
 process(#oracle_extend_tx{nonce = Nonce, fee = Fee, oracle_ttl = OTTL} = Tx,
         _Context, Trees0, _Height, _ConsensusVersion) ->
-    OraclePKOrName      = oracle(Tx),
+    OraclePK      = oracle(Tx),
     AccountsTree0 = aec_trees:accounts(Trees0),
     OraclesTree0  = aec_trees:oracles(Trees0),
-    NamesTree0 = aec_trees:ns(Trees0),
-
-    {ok, OraclePK} = aens:resolve_decoded(oracle_pubkey, OraclePKOrName, NamesTree0),
 
     Account0 = aec_accounts_trees:get(OraclePK, AccountsTree0),
     {ok, Account1} = aec_accounts:spend(Account0, Fee, Nonce),
