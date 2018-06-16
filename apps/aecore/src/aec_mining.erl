@@ -32,7 +32,8 @@ create_key_block_candidate(TopBlock, CurrentKeyBlock, TopBlockTrees, AdjHeaders)
         {error, _} = Error ->
             Error;
         {ok, Miner} ->
-            Block = aec_blocks:new_key(TopBlock, CurrentKeyBlock, Miner, TopBlockTrees),
+            EpochTxs = aec_blocks:txs(TopBlock),
+            Block = aec_blocks:new_key(TopBlock, CurrentKeyBlock, Miner, EpochTxs, TopBlockTrees),
             case adjust_target(Block, AdjHeaders) of
                 {ok, AdjBlock} ->
                     {ok, AdjBlock, aec_pow:pick_nonce()};

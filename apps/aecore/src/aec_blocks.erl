@@ -20,10 +20,10 @@
          set_signature/2,
          key_hash/1,
          set_target/2,
-         new_key/4,
+         new_key/5,
          new_micro/5,
-         new_key_with_state/4,
-         new_with_state/5,
+         new_key_with_state/5,
+         new_with_state/7,
          from_header_and_txs/2,
          to_header/1,
          serialize_to_binary/1,
@@ -120,24 +120,26 @@ txs_hash(Block) ->
 
 -spec new_micro(block(), block(), pubkey(), list(aetx_sign:signed_tx()), aec_trees:trees()) -> block().
 new_micro(LastBlock, CurrentKeyBlock, Miner, Txs, Trees0) ->
-    {B, _} = new_with_state(LastBlock, CurrentKeyBlock, Miner, Txs, Trees0),
+    {B, _} = new_with_state(LastBlock, CurrentKeyBlock, Miner, Txs, [], Trees0, micro),
     B.
 
--spec new_key(block(), block(), pubkey(), aec_trees:trees()) -> block().
-new_key(LastBlock, CurrentKeyBlock, Miner, Trees0) ->
-    {B, _} = new_key_with_state(LastBlock, CurrentKeyBlock, Miner, Trees0),
+-spec new_key(block(), block(), pubkey(), list(aetx_sign:signed_tx()), aec_trees:trees()) -> block().
+new_key(LastBlock, CurrentKeyBlock, Miner, EpochTxs, Trees0) ->
+    {B, _} = new_key_with_state(LastBlock, CurrentKeyBlock, Miner, EpochTxs, Trees0),
     B.
 
--spec new_with_state(block(), block(), pubkey(), list(aetx_sign:signed_tx()), aec_trees:trees()) ->
+-spec new_with_state(block(), block(), pubkey(), list(aetx_sign:signed_tx()), list(aetx_sign:signed_tx()), aec_trees:trees(), block_type()) ->
                             {block(), aec_trees:trees()}.
-new_with_state(LastBlock = #block{}, CurrentKeyBlock, Miner, Txs, Trees0) ->
+new_with_state(LastBlock = #block{}, CurrentKeyBlock, Miner, Txs, EpochTxs, Trees0, BlockType) ->
+    PrevMiner = miner(CurrentKeyBlock),
+
     {ok, LastBlockHeaderHash} = hash_internal_representation(LastBlock),
     {ok, KeyBlockHash} = hash_internal_representation(CurrentKeyBlock),
 
     LastBlockHeight = height(CurrentKeyBlock),
     Version = protocol_effective_at_height(LastBlockHeight),
 
-    {ok, Txs1, Trees} = aec_trees:apply_signed_txs(Miner, Txs, aec_blocks:txs(LastBlock), Trees0, LastBlockHeight, Version),
+    {ok, Txs1, Trees} = aec_trees:apply_signed_txs(BlockType, Miner, Txs, PrevMiner, EpochTxs, Trees0, LastBlockHeight, Version),
     {ok, TxsRootHash} = aec_txs_trees:root_hash(aec_txs_trees:from_txs(Txs1)),
 
     NewBlock =
@@ -152,9 +154,9 @@ new_with_state(LastBlock = #block{}, CurrentKeyBlock, Miner, Txs, Trees0) ->
                version = Version},
     {NewBlock, Trees}.
 
-new_key_with_state(LastBlock, CurrentKeyBlock, Miner, Trees0) ->
 
-    {UncompleteBlock, Trees} = new_with_state(LastBlock, CurrentKeyBlock, Miner, [], Trees0),
+new_key_with_state(LastBlock, CurrentKeyBlock, Miner, EpochTxs, Trees0) ->
+    {UncompleteBlock, Trees} = new_with_state(LastBlock, CurrentKeyBlock, Miner, [], EpochTxs, Trees0, key),
 
     %% Assert correctness of last block protocol version, as minimum
     %% sanity check on previous block and state (mainly for potential

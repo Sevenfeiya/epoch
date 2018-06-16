@@ -514,28 +514,48 @@ assert_state_hash_valid(Trees, Node) ->
 
 apply_node_transactions(Node, Trees) ->
     Txs = db_get_txs(hash(Node)),
-    PrevBlockTxs = get_prev_node_txs(Node),
     Height = node_height(Node),
     Version = node_version(Node),
+    BlockType = node_type(Node),
 
     %% TODO: NG - it looks like we should keep Miner and Height of the prev key block in state in aec_chain_state
     %% TODO: fixit ^^
     Miner = case is_micro_block(Node) of
-        true ->
-            node_miner(db_get_node(node_key_hash(Node)));
-        false ->
-            node_miner(Node)
+        true -> node_miner(db_get_node(node_key_hash(Node)));
+        false -> node_miner(Node)
     end,
+    PrevMiner = get_prev_miner(Node),
+    EpochTxs = get_epoch_txs(Node),
 
-    case aec_trees:apply_signed_txs_strict(Miner, Txs, PrevBlockTxs, Trees, Height, Version) of
+    case aec_trees:apply_signed_txs_strict(BlockType, Miner, Txs, PrevMiner, EpochTxs, Trees, Height, Version) of
         {ok, _, NewTrees} -> NewTrees;
         {error,_What} -> internal_error(invalid_transactions_in_block)
     end.
 
-get_prev_node_txs(Node) ->
-    case node_height(Node) =:= aec_block_genesis:height() of
-        true  -> [];
-        false -> db_get_txs(prev_hash(Node))
+get_epoch_txs(Node) ->
+    case is_micro_block(Node) of
+        true -> [];
+        false ->
+            PrevHash = prev_hash(Node),
+            KeyHash = node_key_hash(Node),
+            get_epoch_txs(PrevHash, KeyHash, [])
+    end.
+
+get_epoch_txs(KeyHash, KeyHash, Acc) -> Acc;
+get_epoch_txs(Hash, KeyHash, Acc) ->
+    Node = db_get_node(Hash),
+    Txs = db_get_txs(Hash),
+    get_epoch_txs(prev_hash(Node), KeyHash, Txs ++ Acc).
+
+get_prev_miner(Node) ->
+    case {node_height(Node) =:= aec_block_genesis:height(), is_micro_block(Node)} of
+        {true, _} -> node_miner(Node);
+        {false, true} -> node_miner(Node);
+        _ ->
+            case node_key_hash(Node) of
+                % undefined -> node_miner(Node); %% TODO: NG - first key block
+                Hash -> node_miner(db_get_node(Hash))
+            end
     end.
 
 find_fork_point(Hash1, Hash2) ->

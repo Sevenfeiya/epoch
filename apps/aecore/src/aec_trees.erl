@@ -27,8 +27,8 @@
          set_oracles/2
         ]).
 
--export([apply_signed_txs/6,
-         apply_signed_txs_strict/6,
+-export([apply_signed_txs/8,
+         apply_signed_txs_strict/8,
          ensure_account/2]).
 
 -record(trees, {
@@ -118,18 +118,21 @@ contracts(Trees) ->
 set_contracts(Trees, Contracts) ->
     Trees#trees{contracts = Contracts}.
 
--spec apply_signed_txs_strict(pubkey(), list(aetx_sign:signed_tx()), list(aetx_sign:signed_tx()),
+-spec apply_signed_txs_strict(block_type(), pubkey(), list(aetx_sign:signed_tx()),
+                              pubkey(), list(aetx_sign:signed_tx()),
                               trees(), height(), non_neg_integer()) ->
                                  {ok, list(aetx_sign:signed_tx()), trees()}
                                | {'error', atom()}.
-apply_signed_txs_strict(Miner, SignedTxs, PrevBlockSignedTxs, Trees, Height, ConsensusVersion) ->
-    apply_signed_txs_common(Miner, SignedTxs, PrevBlockSignedTxs, Trees, Height, ConsensusVersion, true).
+apply_signed_txs_strict(BlockType, Miner, SignedTxs, PrevMiner, EpochTxs, Trees, Height, ConsensusVersion) ->
+    apply_signed_txs_common(BlockType, Miner, SignedTxs, PrevMiner, EpochTxs, Trees, Height, ConsensusVersion, true).
 
--spec apply_signed_txs(pubkey(), list(aetx_sign:signed_tx()), list(aetx_sign:signed_tx()),
+
+-spec apply_signed_txs(block_type(), pubkey(), list(aetx_sign:signed_tx()),
+                       pubkey(), list(aetx_sign:signed_tx()),
                        trees(), height(), non_neg_integer()) ->
                           {ok, list(aetx_sign:signed_tx()), trees()}.
-apply_signed_txs(Miner, SignedTxs, PrevBlockSignedTxs, Trees, Height, ConsensusVersion) ->
-    {ok, _, _} = apply_signed_txs_common(Miner, SignedTxs, PrevBlockSignedTxs, Trees, Height, ConsensusVersion, false).
+apply_signed_txs(BlockType, Miner, SignedTxs, PrevMiner, EpochTxs, Trees, Height, ConsensusVersion) ->
+    {ok, _, _} = apply_signed_txs_common(BlockType, Miner, SignedTxs, PrevMiner, EpochTxs, Trees, Height, ConsensusVersion, false).
 
 %%%=============================================================================
 %%% Internal functions
@@ -165,15 +168,18 @@ internal_commit_to_db(Trees) ->
                , accounts  = aec_accounts_trees:commit_to_db(accounts(Trees))
                }.
 
-apply_signed_txs_common(Miner, SignedTxs, PrevBlockSignedTxs, Trees0, Height, ConsensusVersion, Strict) ->
+apply_signed_txs_common(BlockType, Miner, SignedTxs, PrevMiner, EpochTxs, Trees0, Height, ConsensusVersion, Strict) ->
     Trees1 = perform_pre_transformations(Trees0, Height),
     %% TODO: NG BUG1: we apply award for every block (only key blocks!)
     %% TODO: NG BUG2: Where do we give award to the second miner?
     case apply_txs_on_state_trees(SignedTxs, Trees1, Height, ConsensusVersion, Strict) of
+        {ok, SignedTxs1, Trees2} when BlockType == key ->
+            {Reward, PrevReward} = calculate_total_reward(SignedTxs1, EpochTxs),
+            Trees3 = grant_fee_to_miner(Miner, Trees2, Reward),
+            Trees4 = grant_fee_to_miner(PrevMiner, Trees3, PrevReward),
+            {ok, SignedTxs1, Trees4};
         {ok, SignedTxs1, Trees2} ->
-            TotalReward = calculate_total_reward(SignedTxs1, PrevBlockSignedTxs),
-            Trees3 = grant_fee_to_miner(Miner, Trees2, TotalReward),
-            {ok, SignedTxs1, Trees3};
+            {ok, SignedTxs1, Trees2};
         {error, _} = E -> E
     end.
 
@@ -207,9 +213,10 @@ apply_txs_on_state_trees([SignedTx | Rest], FilteredSignedTxs, Trees0, Height, C
 
 
 calculate_total_reward(SignedTxs, PrevBlockSignedTxs) ->
-    CurrentBlockReward = total_fee(SignedTxs),
-    PrevBlockReward    = total_fee(PrevBlockSignedTxs),
-    aec_governance:block_mine_reward() + floor(0.4 * CurrentBlockReward) + ceil(0.6 * PrevBlockReward).
+    TotalReward = total_fee(SignedTxs) + total_fee(PrevBlockSignedTxs),
+    MinerReward = aec_governance:block_mine_reward() + ceil(0.6 * TotalReward),
+    PrevMinerReward = floor(0.4 * TotalReward),
+    {MinerReward, PrevMinerReward}.
 
 total_fee(SignedTxs) ->
     lists:foldl(
